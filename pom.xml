@@ -1,124 +1,182 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.br</groupId>
-  <artifactId>aws-ecommerce-lambda-functions</artifactId>
-  <version>1.0.0</version>
-  
-    <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <log4j.version>2.19.0</log4j.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-    
-       <dependencies>
-        <dependency>
-            <groupId>software.amazon.lambda</groupId>
-            <artifactId>powertools-tracing</artifactId>
-            <version>1.12.3</version>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.lambda</groupId>
-            <artifactId>powertools-metrics</artifactId>
-            <version>1.12.3</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-core</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-        <dependency>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-lambda-java-events</artifactId>
-          <version>3.11.0</version>
-        </dependency>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.br</groupId>
+	<artifactId>aws-ecommerce-lambda-functions</artifactId>
+	<version>1.0.0</version>
 
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
-        
-         <dependency>
-            <groupId>com.br</groupId>
-            <artifactId>aws-ecommerce-lambda-layers</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
+	<properties>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 
-        <dependency>
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-          <version>4.13.2</version>
-          <scope>test</scope>
-        </dependency>
-        
-        <dependency>
+
+	<dependencyManagement>
+		<dependencies>
+
+			<!-- java sdk 2 -->
+			<!--
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>2.21.20</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>-->
+			<dependency>
+				<groupId>com.amazonaws</groupId>
+				<artifactId>aws-java-sdk-bom</artifactId>
+				<version>1.12.625</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!--
+			<dependency>
+				<groupId>com.amazonaws</groupId>
+				<artifactId>aws-xray-recorder-sdk-bom</artifactId>
+				<version>2.11.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>-->
+
+		</dependencies>
+	</dependencyManagement>
+
+
+	<dependencies>
+
+		<!--powertools -->
+		<!--
+		<dependency>
+			<groupId>software.amazon.lambda</groupId>
+			<artifactId>powertools-tracing</artifactId>
+			<version>1.18.0</version>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.lambda</groupId>
+			<artifactId>powertools-metrics</artifactId>
+			<version>1.18.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>software.amazon.lambda</groupId>
+			<artifactId>powertools-logging</artifactId>
+			<version>1.18.0</version>
+		</dependency> -->
+
+		<dependency>
+			<groupId>com.br</groupId>
+			<artifactId>aws-ecommerce-lambda-layers</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
+		<!-- java sdk 2 -->
+		<!--
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>dynamodb</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>dynamodb-enhanced</artifactId>
+		</dependency> !-->
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-core</artifactId>
+			<version>1.2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-events</artifactId>
+			<version>3.11.0</version>
+		</dependency>
+		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-dynamodb</artifactId>
-			<version>1.12.625</version>
 		</dependency>
-		
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-xml</artifactId>
 			<version>2.16.0</version>
 		</dependency>
-        
-    </dependencies>
-    
-       <build>
-      <plugins>
-        <plugin>
-             <groupId>org.codehaus.mojo</groupId>
-             <artifactId>aspectj-maven-plugin</artifactId>
-             <version>1.14.0</version>
-             <configuration>
-                 <source>${maven.compiler.source}</source>
-                 <target>${maven.compiler.target}</target>
-                 <complianceLevel>${maven.compiler.target}</complianceLevel>
-                 <aspectLibraries>
-                     <aspectLibrary>
-                         <groupId>software.amazon.lambda</groupId>
-                         <artifactId>powertools-tracing</artifactId>
-                     </aspectLibrary>
-                     <aspectLibrary>
-                         <groupId>software.amazon.lambda</groupId>
-                         <artifactId>powertools-metrics</artifactId>
-                     </aspectLibrary>
-                 </aspectLibraries>
-             </configuration>
-             <executions>
-                 <execution>
-                     <goals>
-                         <goal>compile</goal>
-                     </goals>
-                 </execution>
-             </executions>
-        </plugin>
-          <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-shade-plugin</artifactId>
-              <version>3.4.0</version>
-              <configuration>
-                  <createDependencyReducedPom>false</createDependencyReducedPom>
-                  <finalName>aws-ecommerce-lambda-functions</finalName>
-              </configuration>
-              <executions>
-                  <execution>
-                      <phase>package</phase>
-                      <goals>
-                          <goal>shade</goal>
-                      </goals>
-                  </execution>
-              </executions>
-          </plugin>
-      </plugins>
-    </build>
-  
+
+		<!--
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-xray-recorder-sdk-core</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-xray-recorder-sdk-aws-sdk</artifactId>
+		</dependency> -->
+
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!--
+			<plugin>
+				<groupId>dev.aspectj</groupId>
+				<artifactId>aspectj-maven-plugin</artifactId>
+				<version>1.13.1</version>
+				<configuration>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+					<complianceLevel>17</complianceLevel>
+					<aspectLibraries>
+						<aspectLibrary>
+							<groupId>software.amazon.lambda</groupId>
+							<artifactId>powertools-tracing</artifactId>
+						</aspectLibrary>
+						<aspectLibrary>
+							<groupId>software.amazon.lambda</groupId>
+							<artifactId>powertools-logging</artifactId>
+						</aspectLibrary>
+
+						<aspectLibrary>
+							<groupId>software.amazon.lambda</groupId>
+							<artifactId>powertools-metrics</artifactId>
+						</aspectLibrary>
+					</aspectLibraries>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin> -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.4.0</version>
+				<configuration>
+					<createDependencyReducedPom>false</createDependencyReducedPom>
+					<finalName>aws-ecommerce-lambda-functions</finalName>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
 </project>

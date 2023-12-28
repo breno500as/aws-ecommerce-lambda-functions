@@ -1,7 +1,5 @@
 package com.br.aws.ecommerce.product;
 
-import static software.amazon.lambda.powertools.tracing.CaptureMode.DISABLED;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,15 +14,14 @@ import com.br.aws.ecommerce.layers.model.ErrorMessageDTO;
 import com.br.aws.ecommerce.layers.model.ProductDTO;
 import com.br.aws.ecommerce.layers.repository.ProductRepository;
 
-import software.amazon.lambda.powertools.metrics.Metrics;
-import software.amazon.lambda.powertools.tracing.Tracing;
+ 
 
 public class ProductsAdminFunction extends BaseLambdaFunction
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 	
 
-	@Tracing(captureMode = DISABLED)
-	@Metrics(captureColdStart = true)
+	//@Tracing(captureMode = CaptureMode.RESPONSE_AND_ERROR)
+   // @Metrics(captureColdStart = true)
 	public APIGatewayProxyResponseEvent handleRequest(final APIGatewayProxyRequestEvent input, final Context context) {
 		
 		final LambdaLogger logger = context.getLogger();
@@ -36,7 +33,20 @@ public class ProductsAdminFunction extends BaseLambdaFunction
 		
 		try {
 
+			// final ProductRepositoryV2 productRepository = new ProductRepositoryV2(DynamoDbClient.builder().region(Region.US_EAST_1).build());
+			
+			
+			 
+			
 			final ProductRepository productRepository = new ProductRepository(AmazonDynamoDBClientBuilder.defaultClient());
+			
+		//	final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
+		//	        .withRegion("us-east-1")
+		//	        .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+		//	        .build();	
+			
+		//	final ProductRepository productRepository = new ProductRepository(client);
+			
 			
 			if ("/products".equals(input.getResource())) {
 				
