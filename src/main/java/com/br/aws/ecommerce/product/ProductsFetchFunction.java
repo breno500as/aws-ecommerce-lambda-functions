@@ -2,11 +2,13 @@ package com.br.aws.ecommerce.product;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -24,14 +26,16 @@ import software.amazon.lambda.powertools.tracing.Tracing;
 
 public class ProductsFetchFunction extends BaseLambdaFunction
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+	
+	private Logger logger = Logger.getLogger(ProductsFetchFunction.class.getName());
 
 	@Tracing
 	@Logging
 	@Metrics
+	@Override
 	public APIGatewayProxyResponseEvent handleRequest(final APIGatewayProxyRequestEvent input, final Context context) {
 
-		final LambdaLogger logger = context.getLogger();
-
+ 
 		final Map<String, String> headers = new HashMap<>();
 		headers.put("Content-Type", "application/json");
 		headers.put("X-Custom-Header", "application/json");
@@ -46,11 +50,12 @@ public class ProductsFetchFunction extends BaseLambdaFunction
 
 			// Identificador de cada requisição HTTP
 			final String apiRequestId = input.getRequestContext().getRequestId();
-			logger.log(String.format("apiRequestId: %s lamdaRequestId: %s", apiRequestId, lamdaRequestId));
+
+            this.logger.log(Level.INFO, String.format("apiRequestId: %s , lamdaRequestId: %s ", apiRequestId, lamdaRequestId));
 			
 			
 		 	final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
-		 	        .withRegion("us-east-1")
+		 	        .withRegion(Regions.US_EAST_1.getName())
 		 	        .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
 		 	        .build();	
 			
@@ -70,11 +75,11 @@ public class ProductsFetchFunction extends BaseLambdaFunction
 				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(productRepository.findById(id)));
 			}
 
-			logger.log("Method not allowed");
+			this.logger.log(Level.WARNING, "Method not allowed");
 			return response.withBody(super.getMapper().writeValueAsString(new ErrorMessageDTO("Method not allowed"))).withStatusCode(405);
 
 		} catch (Exception e) {
-			logger.log("Error: " + e.getMessage());
+			this.logger.log(Level.SEVERE, String.format("Error %s: ",  e.getMessage()), e);
 			return response.withBody(String.format("{ \"error\": \"%s\" }", e.getMessage())).withStatusCode(500);
 		}
 
