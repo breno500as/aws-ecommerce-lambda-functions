@@ -64,7 +64,7 @@ public class ProductsAdminFunction extends BaseLambdaFunction
 
 				final ProductEntity product = productRepository.save(productBody);
 
-				this.createEvent(product, ProductEventTypeEnum.CREATED, Boolean.TRUE);
+				this.createEvent(product, ProductEventTypeEnum.CREATED, Boolean.TRUE, "insert_user@gmail.com");
 
 				return response.withStatusCode(201).withBody(getMapper().writeValueAsString(product));
 
@@ -78,7 +78,7 @@ public class ProductsAdminFunction extends BaseLambdaFunction
 
 					final ProductEntity product = productRepository.update(productBody, id);
 
-					this.createEvent(product, ProductEventTypeEnum.UPDATED, Boolean.TRUE);
+					this.createEvent(product, ProductEventTypeEnum.UPDATED, Boolean.TRUE, "update_user@gmail.com");
 
 					return response.withStatusCode(200).withBody(getMapper().writeValueAsString(product));
 
@@ -86,7 +86,7 @@ public class ProductsAdminFunction extends BaseLambdaFunction
 
 					productRepository.delete(id);
 
-					this.createEvent(new ProductEntity(id), ProductEventTypeEnum.DELETED, Boolean.TRUE);
+					this.createEvent(new ProductEntity(id), ProductEventTypeEnum.DELETED, Boolean.TRUE, "delete_user@gmail.com");
 
 					return response.withStatusCode(204);
 				}
@@ -103,12 +103,14 @@ public class ProductsAdminFunction extends BaseLambdaFunction
 
 	}
 
-	private void createEvent(ProductEntity product, ProductEventTypeEnum productEventType, boolean async)
+	
+
+	private void createEvent(ProductEntity product, ProductEventTypeEnum productEventType, boolean async, String email)
 			throws JsonProcessingException {
 
 		final ProductEventDTO productEvent = new ProductEventDTO();
 		productEvent.setProductEventType(productEventType);
-		productEvent.setEmail(product.getEmail());
+		productEvent.setEmail(email);
 		productEvent.setProductCode(product.getCode());
 		productEvent.setProductId(product.getId());
 		productEvent.setProductPrice(product.getPrice());
