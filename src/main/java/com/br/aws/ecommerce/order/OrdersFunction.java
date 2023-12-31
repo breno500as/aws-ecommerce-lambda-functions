@@ -1,6 +1,7 @@
 package com.br.aws.ecommerce.order;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,6 +17,7 @@ import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.entity.OrderEntity;
+import com.br.aws.ecommerce.layers.entity.ProductEntity;
 import com.br.aws.ecommerce.layers.model.ErrorMessageDTO;
 import com.br.aws.ecommerce.layers.repository.OrderRepository;
 import com.br.aws.ecommerce.layers.repository.ProductRepository;
@@ -85,10 +87,25 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 			if (email != null) {
 				
 				if (orderId != null) {
-					return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orderRepository.findByEmailAndOrderId(email, orderId)));
+					
+					
+					final OrderEntity order = orderRepository.findByEmailAndOrderId(email, orderId);
+					
+					if (order == null) {
+						return this.notFound(response);
+					}
+					
+			
+					return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(order));
 				}
 				
-				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orderRepository.findByEmail(email)));
+				final List<OrderEntity> orders = orderRepository.findByEmail(email);
+				
+				if (orders == null || orders.isEmpty()) {
+					return this.notFound(response);
+				}
+				
+				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orders));
 			} 
 
 		} else {
@@ -110,8 +127,17 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 		if ("POST".equals(input.getHttpMethod())) {
 
 			final OrderEntity orderBody = getMapper().readValue(input.getBody(), OrderEntity.class);
-			
-			orderBody.setProducts(productRepository.getByIds(orderBody.getIdsProducts()));
+
+			final List<String> idsProductsRequest = orderBody.getIdsProducts();
+
+			final List<ProductEntity> products = productRepository.getByIds(orderBody.getIdsProducts());
+
+			if (products == null || products.size() != idsProductsRequest.size()) {
+				this.logger.log(Level.WARNING, "Different products size");
+				return this.notFound(response);
+			}
+
+			orderBody.setProducts(products);
 
 			final OrderEntity order = orderRepository.save(orderBody);
 
@@ -119,10 +145,15 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 
 		} else if ("DELETE".equals(input.getHttpMethod())) {
 
-	        final String email = queryStringParams.get(EMAIL_KEY);
-			
+			final String email = queryStringParams.get(EMAIL_KEY);
+
 			final String orderId = queryStringParams.get(ORDER_ID_KEY);
 			
+			if (email == null || orderId == null) {
+				this.logger.log(Level.WARNING, "Email or orderId null for delete");
+				return this.notFound(response);
+			}
+
 			orderRepository.deleteByEmailAndOrderId(email, orderId);
 
 			return response.withStatusCode(204);
