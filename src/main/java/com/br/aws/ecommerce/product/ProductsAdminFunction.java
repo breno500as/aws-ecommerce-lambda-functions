@@ -49,6 +49,7 @@ public class ProductsAdminFunction extends BaseLambdaFunction
 		final Map<String, String> headers = new HashMap<>();
 		headers.put("Content-Type", "application/json");
 		headers.put("X-Custom-Header", "application/json");
+		
 		final APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent().withHeaders(headers);
 
 		try {
