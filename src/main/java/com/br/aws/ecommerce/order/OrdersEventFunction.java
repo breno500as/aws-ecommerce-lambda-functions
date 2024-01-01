@@ -34,10 +34,7 @@ public class OrdersEventFunction extends BaseLambdaFunction implements RequestHa
 	public String handleRequest(SNSEvent input, Context context) {
 
 		try {
-
-		
-
-			
+ 
 			for (SNSRecord r : input.getRecords()) {
 				
 	             final SNS sns = r.getSNS();

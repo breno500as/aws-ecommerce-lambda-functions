@@ -153,7 +153,7 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 			orderBody.setProducts(products);
 						
 			final CompletableFuture<OrderEntity> dynamoTask = CompletableFuture.supplyAsync(() -> 
-				  this.saveOrder(orderRepository, orderBody)
+			       orderRepository.save(orderBody)
 			);
 
 			 
@@ -200,9 +200,7 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 		
 	}
 	
-	private OrderEntity saveOrder(OrderRepository orderRepository, OrderEntity orderBody) {
-		return orderRepository.save(orderBody);
-	}
+ 
 	
 	private APIGatewayProxyResponseEvent notFound(APIGatewayProxyResponseEvent response) throws JsonProcessingException {
 		this.logger.log(Level.WARNING, "Not Found");
