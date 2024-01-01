@@ -14,7 +14,7 @@ import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.model.ProductEventDTO;
 import com.br.aws.ecommerce.layers.repository.EventRepository;
-import com.br.aws.ecommerce.product.ProductsAdminFunction;
+import com.br.aws.ecommerce.product.ProductAdminFunction;
 
 import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
@@ -22,7 +22,7 @@ import software.amazon.lambda.powertools.tracing.Tracing;
 
 public class ProductEventFunction extends BaseLambdaFunction implements RequestHandler<ProductEventDTO, String> {
 
-	private Logger logger = Logger.getLogger(ProductsAdminFunction.class.getName());
+	private Logger logger = Logger.getLogger(ProductAdminFunction.class.getName());
 
 	@Tracing
 	@Logging

@@ -23,9 +23,9 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrdersEventFunction extends BaseLambdaFunction implements RequestHandler<SNSEvent, String> {
+public class OrderEventFunction extends BaseLambdaFunction implements RequestHandler<SNSEvent, String> {
 
-	private Logger logger = Logger.getLogger(OrdersFunction.class.getName());
+	private Logger logger = Logger.getLogger(OrderFunction.class.getName());
 
 	@Tracing
 	@Logging
@@ -48,6 +48,8 @@ public class OrdersEventFunction extends BaseLambdaFunction implements RequestHa
 				
 				final OrderEventDTO orderEvent = getMapper().readValue(orderEnvelope.getData(), OrderEventDTO.class);
 				
+				this.logger.log(Level.INFO, "Order type: {0}", orderEnvelope.getEventType().getValue());
+				
 				orderEvent.setMessageId(sns.getMessageId());
 
 				final EventRepository eventRepository = new EventRepository(client);
@@ -60,7 +62,7 @@ public class OrdersEventFunction extends BaseLambdaFunction implements RequestHa
 			return "OK";
 
 		} catch (Exception e) {
-			this.logger.log(Level.SEVERE, String.format("Error %s: ", e.getMessage()), e);
+			this.logger.log(Level.SEVERE, String.format("Error: %s", e.getMessage()), e);
 			throw new ServiceException(e.getMessage());
 		}
 	}

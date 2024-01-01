@@ -24,10 +24,10 @@ import software.amazon.lambda.powertools.tracing.Tracing;
 
  
 
-public class ProductsFetchFunction extends BaseLambdaFunction
+public class ProductFetchFunction extends BaseLambdaFunction
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 	
-	private Logger logger = Logger.getLogger(ProductsFetchFunction.class.getName());
+	private Logger logger = Logger.getLogger(ProductFetchFunction.class.getName());
 
 	@Tracing
 	@Logging
@@ -79,7 +79,7 @@ public class ProductsFetchFunction extends BaseLambdaFunction
 			return response.withBody(super.getMapper().writeValueAsString(new ErrorMessageDTO("Method not allowed"))).withStatusCode(405);
 
 		} catch (Exception e) {
-			this.logger.log(Level.SEVERE, String.format("Error %s: ",  e.getMessage()), e);
+			this.logger.log(Level.SEVERE, String.format("Error: %s",  e.getMessage()), e);
 			return response.withBody(String.format("{ \"error\": \"%s\" }", e.getMessage())).withStatusCode(500);
 		}
 

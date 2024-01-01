@@ -18,6 +18,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.amazonaws.services.sns.model.MessageAttributeValue;
+import com.amazonaws.services.sns.model.PublishRequest;
 import com.amazonaws.services.sns.model.PublishResult;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
@@ -37,15 +39,17 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrdersFunction extends BaseLambdaFunction implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class OrderFunction extends BaseLambdaFunction implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-	private Logger logger = Logger.getLogger(OrdersFunction.class.getName());
+	private Logger logger = Logger.getLogger(OrderFunction.class.getName());
 	
 	private static final String ORDER_EVENTS_TOPIC_ARN = "ORDER_EVENTS_TOPIC_ARN";
 	
 	private static final String EMAIL_KEY = "email";
 	
 	private static final String ORDER_ID_KEY = "orderId";
+	
+	private static final String PRODUCTS_KEY = "products";
 
 	@Tracing
 	@Logging
@@ -89,18 +93,18 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 			throws JsonProcessingException {
 		
 		
-		final Map<String, String> queryStringParams = input.getQueryStringParameters();
-		
-		if (queryStringParams != null && !queryStringParams.isEmpty()) {
+		    final Map<String, String> queryStringParams = input.getQueryStringParameters();
+		   	 
 			
-			final String email = queryStringParams.get(EMAIL_KEY);
+			final String email = queryStringParams != null ? queryStringParams.get(EMAIL_KEY) : null;
 			
-			final String orderId = queryStringParams.get(ORDER_ID_KEY);
+			final String orderId = queryStringParams != null ? queryStringParams.get(ORDER_ID_KEY) : null;
+			
+			final String products = queryStringParams != null ? queryStringParams.get(PRODUCTS_KEY) : null;
 			
 			if (email != null) {
 				
 				if (orderId != null) {
-					
 					
 					final OrderEntity order = orderRepository.findByEmailAndOrderId(email, orderId);
 					
@@ -121,12 +125,9 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orders));
 			} 
 
-		} else {
-			return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orderRepository.findAll()));
-		}
-		
-		
-		return this.notFound(response);
+		 
+			return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orderRepository.findAll("S".equals(products) ? true : false)));
+		 
 	}
 
 	private APIGatewayProxyResponseEvent handleRequestWrite(final OrderRepository orderRepository,
@@ -227,9 +228,20 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 				                    .withRegion(Regions.US_EAST_1.getName())
 				                    .withCredentials(new DefaultAWSCredentialsProviderChain()).build();
 		
-		final PublishResult publishResult = snsClient.publish(System.getenv(ORDER_EVENTS_TOPIC_ARN), getMapper().writeValueAsString(orderEnvelope));
+		final Map<String, MessageAttributeValue> attributes = new HashMap<>();
+		attributes.put("eventType", new MessageAttributeValue()
+				.withDataType("String")
+				.withStringValue(orderEventType.getValue()));
 		
-		this.logger.log(Level.INFO, String.format(" Message id: %s , Lambda request id: %s", publishResult.getMessageId(), lambdaRequestId));
+	 
+		final PublishRequest request = new PublishRequest()
+		        .withTopicArn(System.getenv(ORDER_EVENTS_TOPIC_ARN))
+		        .withMessage(getMapper().writeValueAsString(orderEnvelope))
+		        .withMessageAttributes(attributes);	         
+		
+		final PublishResult publishResult = snsClient.publish(request);
+		
+		this.logger.log(Level.INFO, String.format("Message id: %s , Lambda request id: %s", publishResult.getMessageId(), lambdaRequestId));
 	}
 
 
