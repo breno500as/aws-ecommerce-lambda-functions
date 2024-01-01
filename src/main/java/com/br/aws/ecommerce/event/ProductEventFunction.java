@@ -40,9 +40,9 @@ public class ProductEventFunction extends BaseLambdaFunction implements RequestH
 			final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1.getName())
 					.withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
 
-			final EventRepository productEventRepository = new EventRepository(client);
+			final EventRepository eventRepository = new EventRepository(client);
 
-			productEventRepository.saveProductEvent(productEvent);
+			eventRepository.saveProductEvent(productEvent);
 
 			return "OK " + productEvent.getProductEventType().getValue();
 

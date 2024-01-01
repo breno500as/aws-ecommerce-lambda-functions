@@ -3,9 +3,12 @@ package com.br.aws.ecommerce.order;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
@@ -13,12 +16,18 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.amazonaws.services.sns.model.PublishResult;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.entity.OrderEntity;
 import com.br.aws.ecommerce.layers.entity.ProductEntity;
 import com.br.aws.ecommerce.layers.model.ErrorMessageDTO;
+import com.br.aws.ecommerce.layers.model.OrderEnvelopeDTO;
+import com.br.aws.ecommerce.layers.model.OrderEventDTO;
+import com.br.aws.ecommerce.layers.model.OrderEventTypeEnum;
 import com.br.aws.ecommerce.layers.repository.OrderRepository;
 import com.br.aws.ecommerce.layers.repository.ProductRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,6 +40,8 @@ import software.amazon.lambda.powertools.tracing.Tracing;
 public class OrdersFunction extends BaseLambdaFunction implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
 	private Logger logger = Logger.getLogger(OrdersFunction.class.getName());
+	
+	private static final String ORDER_EVENTS_TOPIC_ARN = "ORDER_EVENTS_TOPIC_ARN";
 	
 	private static final String EMAIL_KEY = "email";
 	
@@ -48,6 +59,8 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 		
 		final APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent().withHeaders(headers);
 		
+		final String lamdaRequestId = context.getAwsRequestId();
+		
 		try {
 
 			final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1.getName())
@@ -59,7 +72,7 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 			if ("GET".equals(input.getHttpMethod())) {
 				return this.handleRequestRead(orderRepository,productRepository, input, response);
 			} else {
-				return this.handleRequestWrite(orderRepository, productRepository,  input, response);
+				return this.handleRequestWrite(orderRepository, productRepository,  input, response, lamdaRequestId);
 			}
 
 		 
@@ -118,8 +131,8 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 
 	private APIGatewayProxyResponseEvent handleRequestWrite(final OrderRepository orderRepository,
 			ProductRepository productRepository,
-			final APIGatewayProxyRequestEvent input, final APIGatewayProxyResponseEvent response)
-			throws JsonMappingException, JsonProcessingException {
+			final APIGatewayProxyRequestEvent input, final APIGatewayProxyResponseEvent response, String lamdaRequestId)
+			throws JsonMappingException, JsonProcessingException, InterruptedException, ExecutionException {
 		
 		
 		final Map<String, String> queryStringParams = input.getQueryStringParameters();
@@ -138,10 +151,28 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 			}
 
 			orderBody.setProducts(products);
+						
+			final CompletableFuture<OrderEntity> dynamoTask = CompletableFuture.supplyAsync(() -> 
+				  this.saveOrder(orderRepository, orderBody)
+			);
 
-			final OrderEntity order = orderRepository.save(orderBody);
-
-			return response.withStatusCode(201).withBody(getMapper().writeValueAsString(order));
+			 
+			final CompletableFuture<Void> snsTask = CompletableFuture.runAsync(() -> {
+				try {
+					this.publishSnsNotification(orderBody, OrderEventTypeEnum.CREATED, lamdaRequestId);
+				} catch (JsonProcessingException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			
+			// https://stackoverflow.com/questions/34211080/how-do-you-access-completed-futures-passed-to-completablefuture-allof
+		 
+			final CompletableFuture<Void> allTasks = CompletableFuture.allOf(dynamoTask, snsTask);
+			
+			allTasks.get();  
+			
+		
+			return response.withStatusCode(201).withBody(getMapper().writeValueAsString(dynamoTask.get()));
 
 		} else if ("DELETE".equals(input.getHttpMethod())) {
 
@@ -155,6 +186,12 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 			}
 
 			orderRepository.deleteByEmailAndOrderId(email, orderId);
+			
+			final OrderEntity order = new OrderEntity();
+			order.setPk(email);
+			order.setSk(orderId);
+			
+			this.publishSnsNotification(order, OrderEventTypeEnum.DELETED, lamdaRequestId);
 
 			return response.withStatusCode(204);
 		}
@@ -163,10 +200,38 @@ public class OrdersFunction extends BaseLambdaFunction implements RequestHandler
 		
 	}
 	
+	private OrderEntity saveOrder(OrderRepository orderRepository, OrderEntity orderBody) {
+		return orderRepository.save(orderBody);
+	}
+	
 	private APIGatewayProxyResponseEvent notFound(APIGatewayProxyResponseEvent response) throws JsonProcessingException {
 		this.logger.log(Level.WARNING, "Not Found");
 		return response.withBody(super.getMapper().writeValueAsString(new ErrorMessageDTO("Not Found")))
 				.withStatusCode(404);
+	}
+	
+	private void publishSnsNotification(final OrderEntity order, final OrderEventTypeEnum orderEventType, String lambdaRequestId) throws JsonProcessingException {
+		
+		final OrderEventDTO orderEvent = new OrderEventDTO();
+		orderEvent.setBilling(order.getBilling());
+		orderEvent.setEmail(order.getPk());
+		orderEvent.setOrderId(order.getSk());
+		orderEvent.setRequestId(lambdaRequestId);
+		orderEvent.setProducts(order.getProducts());
+		
+		final OrderEnvelopeDTO orderEnvelope = new OrderEnvelopeDTO();
+		orderEnvelope.setEventType(orderEventType);
+		orderEnvelope.setData( getMapper().writeValueAsString(orderEvent));
+		
+		final AmazonSNS snsClient = AmazonSNSClientBuilder
+				                    .standard()
+				                    .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+				                    .withRegion(Regions.US_EAST_1.getName())
+				                    .withCredentials(new DefaultAWSCredentialsProviderChain()).build();
+		
+		final PublishResult publishResult = snsClient.publish(System.getenv(ORDER_EVENTS_TOPIC_ARN), getMapper().writeValueAsString(orderEnvelope));
+		
+		this.logger.log(Level.INFO, String.format(" Message id: %s , Lambda request id: %s", publishResult.getMessageId(), lambdaRequestId));
 	}
 
 
