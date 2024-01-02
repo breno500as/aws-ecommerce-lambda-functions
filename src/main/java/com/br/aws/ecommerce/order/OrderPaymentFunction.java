@@ -10,13 +10,14 @@ import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent.SNS;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent.SNSRecord;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
+import com.br.aws.ecommerce.layers.entity.OrderEntity;
 import com.br.aws.ecommerce.layers.model.OrderEnvelopeDTO;
 
 import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrderPaymentFunction extends BaseLambdaFunction implements RequestHandler<SNSEvent, String> {
+public class OrderPaymentFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SNSEvent, String> {
 
 	private Logger logger = Logger.getLogger(OrderPaymentFunction.class.getName());
 

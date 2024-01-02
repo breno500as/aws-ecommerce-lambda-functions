@@ -21,6 +21,7 @@ import com.amazonaws.services.simpleemail.model.SendEmailRequest;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
+import com.br.aws.ecommerce.layers.entity.OrderEntity;
 import com.br.aws.ecommerce.layers.model.OrderEnvelopeDTO;
 import com.br.aws.ecommerce.layers.model.OrderEventDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,7 +31,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrderEmailFunction extends BaseLambdaFunction implements RequestHandler<SQSEvent, String> {
+public class OrderEmailFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SQSEvent, String> {
 	
 	private Logger logger = Logger.getLogger(OrderEmailFunction.class.getName());
 

@@ -12,6 +12,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
+import com.br.aws.ecommerce.layers.entity.ProductEntity;
 import com.br.aws.ecommerce.layers.model.ProductEventDTO;
 import com.br.aws.ecommerce.layers.repository.EventRepository;
 import com.br.aws.ecommerce.product.ProductAdminFunction;
@@ -20,7 +21,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class ProductEventFunction extends BaseLambdaFunction implements RequestHandler<ProductEventDTO, String> {
+public class ProductEventFunction extends BaseLambdaFunction<ProductEntity> implements RequestHandler<ProductEventDTO, String> {
 
 	private Logger logger = Logger.getLogger(ProductAdminFunction.class.getName());
 

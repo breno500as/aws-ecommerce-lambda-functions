@@ -15,6 +15,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
+import com.br.aws.ecommerce.layers.entity.ProductEntity;
 import com.br.aws.ecommerce.layers.model.ErrorMessageDTO;
 import com.br.aws.ecommerce.layers.repository.ProductRepository;
 
@@ -24,7 +25,7 @@ import software.amazon.lambda.powertools.tracing.Tracing;
 
  
 
-public class ProductFetchFunction extends BaseLambdaFunction
+public class ProductFetchFunction extends BaseLambdaFunction<ProductEntity>
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 	
 	private Logger logger = Logger.getLogger(ProductFetchFunction.class.getName());

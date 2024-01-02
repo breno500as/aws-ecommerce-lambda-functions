@@ -15,6 +15,7 @@ import com.amazonaws.services.lambda.runtime.events.SNSEvent.SNSRecord;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
+import com.br.aws.ecommerce.layers.entity.OrderEntity;
 import com.br.aws.ecommerce.layers.model.OrderEnvelopeDTO;
 import com.br.aws.ecommerce.layers.model.OrderEventDTO;
 import com.br.aws.ecommerce.layers.repository.EventRepository;
@@ -23,7 +24,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrderEventFunction extends BaseLambdaFunction implements RequestHandler<SNSEvent, String> {
+public class OrderEventFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SNSEvent, String> {
 
 	private Logger logger = Logger.getLogger(OrderFunction.class.getName());
 

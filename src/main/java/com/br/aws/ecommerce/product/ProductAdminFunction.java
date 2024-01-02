@@ -35,7 +35,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class ProductAdminFunction extends BaseLambdaFunction
+public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
 	private Logger logger = Logger.getLogger(ProductAdminFunction.class.getName());
