@@ -12,8 +12,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class InvoiceConnectionFunction
-		implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
+public class InvoiceConnectionFunction implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
 
 	private Logger logger = Logger.getLogger(InvoiceConnectionFunction.class.getName());
 
@@ -24,10 +23,11 @@ public class InvoiceConnectionFunction
 	public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent input, Context context) {
 		final APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
 
-		this.logger.log(Level.INFO, "InvoiceConnectionFunction start connectionId: {0}",input.getRequestContext().getConnectionId());
-		
-		response.setBody("Velho vagabundo! Vai pra jaula!");
+		this.logger.log(Level.INFO, "InvoiceConnectionFunction start connectionId: {0}",
+				input.getRequestContext().getConnectionId());
 
+		response.setStatusCode(200);
+	
 		return response;
 	}
 

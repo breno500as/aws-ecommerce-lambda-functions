@@ -5,25 +5,21 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.lambda.model.ServiceException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
-import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder;
 import com.amazonaws.services.simpleemail.model.Body;
 import com.amazonaws.services.simpleemail.model.Content;
 import com.amazonaws.services.simpleemail.model.Destination;
 import com.amazonaws.services.simpleemail.model.Message;
 import com.amazonaws.services.simpleemail.model.SendEmailRequest;
-import com.amazonaws.xray.AWSXRay;
-import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.entity.OrderEntity;
 import com.br.aws.ecommerce.layers.model.OrderEnvelopeDTO;
 import com.br.aws.ecommerce.layers.model.OrderEventDTO;
+import com.br.aws.ecommerce.util.ClientsBean;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
@@ -74,11 +70,6 @@ public class OrderEmailFunction extends BaseLambdaFunction<OrderEntity> implemen
 		
 		final OrderEventDTO orderEvent = getMapper().readValue(orderEnvelope.getData(), OrderEventDTO.class);
 		
-		final AmazonSimpleEmailService client = 
-		          AmazonSimpleEmailServiceClientBuilder.standard()
-		            .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
-		            .withRegion(Regions.US_EAST_1).build();
-		
 		final SendEmailRequest request = new SendEmailRequest()
 		          .withDestination(
 		              new Destination().withToAddresses(orderEvent.getEmail()))
@@ -90,7 +81,7 @@ public class OrderEmailFunction extends BaseLambdaFunction<OrderEntity> implemen
 		                  .withCharset("UTF-8").withData("Pedido Recebido!")))
 		          .withSource("breno500as@gmail.com");
 		  
-		 client.sendEmail(request);
+		 ClientsBean.getSimpleEmailClient().sendEmail(request);
 		
 	}
 

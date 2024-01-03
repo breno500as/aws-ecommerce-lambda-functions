@@ -3,19 +3,16 @@ package com.br.aws.ecommerce.event;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.lambda.model.ServiceException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.xray.AWSXRay;
-import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.entity.ProductEntity;
 import com.br.aws.ecommerce.layers.model.ProductEventDTO;
 import com.br.aws.ecommerce.layers.repository.EventRepository;
 import com.br.aws.ecommerce.product.ProductAdminFunction;
+import com.br.aws.ecommerce.util.ClientsBean;
+import com.br.aws.ecommerce.util.Constants;
 
 import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
@@ -38,10 +35,7 @@ public class ProductEventFunction extends BaseLambdaFunction<ProductEntity> impl
 
 			productEvent.setRequestId(context.getAwsRequestId());
 
-			final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1.getName())
-					.withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
-
-			final EventRepository eventRepository = new EventRepository(client);
+			final EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
 
 			eventRepository.saveProductEvent(productEvent);
 

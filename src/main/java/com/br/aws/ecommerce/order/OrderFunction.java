@@ -11,7 +11,6 @@ import java.util.logging.Logger;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -32,6 +31,8 @@ import com.br.aws.ecommerce.layers.model.OrderEventDTO;
 import com.br.aws.ecommerce.layers.model.OrderEventTypeEnum;
 import com.br.aws.ecommerce.layers.repository.OrderRepository;
 import com.br.aws.ecommerce.layers.repository.ProductRepository;
+import com.br.aws.ecommerce.util.ClientsBean;
+import com.br.aws.ecommerce.util.Constants;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
@@ -67,11 +68,10 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 		
 		try {
 
-			final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1.getName())
-					.withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
+			final AmazonDynamoDB dynamoDbClient = ClientsBean.getDynamoDbClient();
 
-			final OrderRepository orderRepository = new OrderRepository(client);
-			final ProductRepository productRepository = new ProductRepository(client);
+			final OrderRepository orderRepository = new OrderRepository(dynamoDbClient, System.getenv(Constants.ORDERS_DDB));
+			final ProductRepository productRepository = new ProductRepository(dynamoDbClient, System.getenv(Constants.PRODUCTS_DDB));
 			
 			if ("GET".equals(input.getHttpMethod())) {
 				return this.handleRequestRead(orderRepository,productRepository, input, response);

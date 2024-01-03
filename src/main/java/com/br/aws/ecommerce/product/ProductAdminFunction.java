@@ -8,9 +8,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.amazonaws.handlers.AsyncHandler;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder;
 import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.InvokeRequest;
@@ -20,14 +17,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.amazonaws.xray.AWSXRay;
-import com.amazonaws.xray.handlers.TracingHandler;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.entity.ProductEntity;
 import com.br.aws.ecommerce.layers.model.ErrorMessageDTO;
 import com.br.aws.ecommerce.layers.model.ProductEventDTO;
 import com.br.aws.ecommerce.layers.model.ProductEventTypeEnum;
 import com.br.aws.ecommerce.layers.repository.ProductRepository;
+import com.br.aws.ecommerce.util.ClientsBean;
 import com.br.aws.ecommerce.util.Constants;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -54,10 +50,7 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 
 		try {
 
-			final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1.getName())
-					.withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
-
-			final ProductRepository productRepository = new ProductRepository(client);
+			final ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB));
 
 			if ("/products".equals(input.getResource())) {
 
