@@ -1,4 +1,4 @@
-package com.br.aws.ecommerce.event;
+package com.br.aws.ecommerce.product;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -10,7 +10,6 @@ import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.entity.ProductEntity;
 import com.br.aws.ecommerce.layers.model.ProductEventDTO;
 import com.br.aws.ecommerce.layers.repository.EventRepository;
-import com.br.aws.ecommerce.product.ProductAdminFunction;
 import com.br.aws.ecommerce.util.ClientsBean;
 import com.br.aws.ecommerce.util.Constants;
 

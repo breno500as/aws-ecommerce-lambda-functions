@@ -109,38 +109,38 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 		productEvent.setProductId(product.getId());
 		productEvent.setProductPrice(product.getPrice());
 
-		final String functionEvents = System.getenv(Constants.PRODUCT_EVENTS_FUNCTION_NAME);
+		final String functionProductEvents = System.getenv(Constants.PRODUCT_EVENT_FUNCTION_KEY);
 
 		InvokeResult invokeResult = null;
 
-		final InvokeRequest invokeRequest = new InvokeRequest().withFunctionName(functionEvents)
+		final InvokeRequest invokeRequest = new InvokeRequest().withFunctionName(functionProductEvents)
 				.withPayload(getMapper().writeValueAsString(productEvent));
 
 		try {
 
 			if (async) {
 
-				this.logger.log(Level.INFO, String.format("Asynchronous: %s , Event:  %s", functionEvents,
+				this.logger.log(Level.INFO, String.format("Asynchronous: %s , Event:  %s", functionProductEvents,
 						productEvent.getProductEventType().getValue()));
 
 				AWSLambdaAsyncClientBuilder.defaultClient().invokeAsync(invokeRequest, new AsyncLambdaHandler());
 
 			} else {
 
-				this.logger.log(Level.INFO, String.format("Synchronous: %s , Event:  %s", functionEvents,
+				this.logger.log(Level.INFO, String.format("Synchronous: %s , Event:  %s", functionProductEvents,
 						productEvent.getProductEventType().getValue()));
 
 				invokeResult = AWSLambdaClientBuilder.defaultClient().invoke(invokeRequest);
 
 				String ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
 
-				this.logger.log(Level.INFO, String.format("Return %s: %s ", functionEvents, ans));
+				this.logger.log(Level.INFO, String.format("Return %s: %s ", functionProductEvents, ans));
 				this.logger.log(Level.INFO, "Status code return: {0}", invokeResult.getStatusCode());
 
 			}
 
 		} catch (ServiceException e) {
-			this.logger.log(Level.SEVERE, String.format("Error invoking %s: ", functionEvents, e.getMessage()), e);
+			this.logger.log(Level.SEVERE, String.format("Error invoking %s: ", functionProductEvents, e.getMessage()), e);
 		}
 
 	}
