@@ -41,7 +41,7 @@ public class OrderEventFetchFunction extends BaseLambdaFunction<OrderEntity> imp
 
 		try {
 
-			final EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.ORDERS_DDB));
+			final EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
 			
 			final Map<String, String> queryStringParams = input.getQueryStringParameters();
 			   	 	

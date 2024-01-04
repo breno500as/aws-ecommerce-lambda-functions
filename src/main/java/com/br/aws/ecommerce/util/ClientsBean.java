@@ -25,7 +25,7 @@ public class ClientsBean {
 		String webSocketApiGatewayUrl = System.getenv(WEB_SOCKET_API_GATEWAY_KEY);
 		
 		if (webSocketApiGatewayUrl == null) {
-			webSocketApiGatewayUrl = "wss://ycnkba0opb.execute-api.us-east-1.amazonaws.com/prod";
+			webSocketApiGatewayUrl = "wss://09meb2nkod.execute-api.us-east-1.amazonaws.com/prod";
 		}
 		
 
