@@ -31,9 +31,14 @@ import software.amazon.lambda.powertools.tracing.Tracing;
  * 
  * Chamada do webscoket
  * 
- * primeira: { "action": "getImportUrl" }
+ * Cenário 1 - Mandar no websocket a mensagem de solicitação da  url, e enviar uma requisição http put utlizando a url: 
+ * { "action": "getImportUrl" }
  * 
- * segunda de cancelamento { "action": "cancelImport", "transactionId": "56cd0406-b06e-420f-8b61-93d7e6b1be0e" }
+ * Cenário 2 - Mandar no websocket a mensagem de solicitação da  url, pegar o transaction id e mandar uma mensagem de cancelamento  via websocket
+ *  { "action": "cancelImport", "transactionId": "56cd0406-b06e-420f-8b61-93d7e6b1be0e" }
+ *  
+ * Cenário 3 - Mandar no websocket a mensagem de solicitação da  url, ir no console do dynamodb da aws e apagar manualmente o registro de transaction
+ *  com o status de URL_GENERATED, o mensagem de timeout é enviada para o cliente (Isso vai simular um erro no processamento da importação do arquivo).
  */
 
 public class InvoiceGetUrlFunction extends BaseLambdaFunction<InvoiceTransactionEntity> implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
