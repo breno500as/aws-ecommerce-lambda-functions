@@ -28,18 +28,19 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrderEmailFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SQSEvent, String> {
+public class OrderEmailFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SQSEvent, Boolean> {
 
 	private Logger logger = Logger.getLogger(OrderEmailFunction.class.getName());
 
 	private AmazonSimpleEmailService emailClient = ClientsBean.getSimpleEmailClient();
 
-	@SuppressWarnings("unchecked")
+	
 	@Tracing
 	@Logging
 	@Metrics
 	@Override
-	public String handleRequest(SQSEvent input, Context context) {
+	@SuppressWarnings("unchecked")
+	public Boolean handleRequest(SQSEvent input, Context context) {
 
 		try {
 
@@ -57,7 +58,7 @@ public class OrderEmailFunction extends BaseLambdaFunction<OrderEntity> implemen
 
 			}
 
-			return "OK";
+			return true;
 
 		} catch (Exception e) {
 			this.logger.log(Level.SEVERE, String.format("Error: %s", e.getMessage()), e);
@@ -65,7 +66,8 @@ public class OrderEmailFunction extends BaseLambdaFunction<OrderEntity> implemen
 		}
 
 	}
-
+	
+	@SuppressWarnings("unused")
 	private void sendEmail(final String snsMessage) throws JsonMappingException, JsonProcessingException {
 
 		final OrderEnvelopeDTO orderEnvelope = getMapper().readValue(snsMessage, OrderEnvelopeDTO.class);

@@ -1,9 +1,16 @@
 package com.br.aws.ecommerce.invoice;
 
+import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.amazonaws.services.eventbridge.AmazonEventBridge;
+import com.amazonaws.services.eventbridge.model.PutEventsRequest;
+import com.amazonaws.services.eventbridge.model.PutEventsRequestEntry;
+import com.amazonaws.services.eventbridge.model.PutEventsResult;
 import com.amazonaws.services.lambda.model.ServiceException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -24,20 +31,22 @@ import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
 public class InvoiceEventFunction extends BaseLambdaFunction<InvoiceEntity>
-		implements RequestHandler<DynamodbEvent, String> {
+		implements RequestHandler<DynamodbEvent, Boolean> {
 
 	private Logger logger = Logger.getLogger(InvoiceEventFunction.class.getName());
 
 	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(),
-			System.getenv(Constants.EVENTS_DDB));
+			System.getenv(Constants.EVENTS_DDB_KEY));
 
 	private InvoiceWSService apiGatewayService = new InvoiceWSService(ClientsBean.getApiGatewayClient());
+	
+	private AmazonEventBridge eventBridgeClient = ClientsBean.getEventBridgeClient();
 
 	@Tracing
 	@Logging
 	@Metrics
 	@Override
-	public String handleRequest(DynamodbEvent input, Context context) {
+	public Boolean handleRequest(DynamodbEvent input, Context context) {
 		try {
 
 			this.logger.log(Level.INFO, "InvoiceEventFunction start");
@@ -46,7 +55,7 @@ public class InvoiceEventFunction extends BaseLambdaFunction<InvoiceEntity>
 				this.processDynamoDbRecord(dynamoDbRecord);
 			}
 
-			return "OK";
+			return true;
 
 		} catch (Exception e) {
 			this.logger.log(Level.SEVERE, String.format("Error: %s", e.getMessage()), e);
@@ -54,7 +63,7 @@ public class InvoiceEventFunction extends BaseLambdaFunction<InvoiceEntity>
 		}
 	}
 
-	private void processDynamoDbRecord(DynamodbStreamRecord dynamoDbRecord) {
+	private void processDynamoDbRecord(DynamodbStreamRecord dynamoDbRecord) throws InterruptedException, ExecutionException {
 		
 		if ("INSERT".equals(dynamoDbRecord.getEventName())) {
 			
@@ -93,7 +102,7 @@ public class InvoiceEventFunction extends BaseLambdaFunction<InvoiceEntity>
 
 	}
 
-	private void processExpiredTransaction(Map<String, AttributeValue> oldImage) {
+	private void processExpiredTransaction(Map<String, AttributeValue> oldImage) throws InterruptedException, ExecutionException {
 		final String transactionId = oldImage.get("sk").getS();
 		final String connectionId = oldImage.get("connectionId").getS();
 		
@@ -102,10 +111,34 @@ public class InvoiceEventFunction extends BaseLambdaFunction<InvoiceEntity>
 		if (oldImage.get("invoiceTranscationStatus").getS().equals(InvoiceTranscationStatus.PROCESSED.getValue())) {
 			this.logger.log(Level.INFO, "Invoice processed");
 		} else {
-			this.apiGatewayService.sendInvoiceStatus(connectionId, transactionId, InvoiceTranscationStatus.TIMEOUT);
+			
+			final CompletableFuture<Void> sendTimoutStatusTask = CompletableFuture.runAsync(() -> this.apiGatewayService.sendInvoiceStatus(connectionId, transactionId, InvoiceTranscationStatus.TIMEOUT));
+
+			final CompletableFuture<Void> sendTimeoutMessageTask = CompletableFuture.runAsync(() -> this.sendErrorToEventBridge(("{\"reason\": \"" + System.getenv(Constants.INVOICE_TIMEOUT_KEY) + "\"}")));
+				
+			final CompletableFuture<Void> timeoutInvoiceTasks = CompletableFuture.allOf(sendTimoutStatusTask, sendTimeoutMessageTask);
+
+			timeoutInvoiceTasks.get();
+				
 			this.apiGatewayService.disconnectClient(connectionId);
 		}
 	}
+	
+	private void sendErrorToEventBridge(String jsonMessage) {
+   	 
+    	this.logger.log(Level.INFO, "EventBridge putEvents: {0}", jsonMessage);
+    		
+ 		final PutEventsResult putEventsResult = this.eventBridgeClient.putEvents(new PutEventsRequest().withEntries(
+ 				new PutEventsRequestEntry()
+ 				.withSource(System.getenv(Constants.INVOICE_SOURCE_EVENT_BRIDGE_KEY))
+ 				.withEventBusName(System.getenv(Constants.AUDIT_EVENT_BRIDGE_KEY))
+ 				.withDetailType("invoice")
+ 				.withDetail(jsonMessage)
+ 				.withTime(new Date())));
+ 		
+ 		this.logger.log(Level.INFO, "EventBridge putEventsResult status code: {0}", putEventsResult.getSdkHttpMetadata().getHttpStatusCode());
+ 		
+ 	}
 	
 	 
 

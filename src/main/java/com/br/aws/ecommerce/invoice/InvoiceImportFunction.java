@@ -1,18 +1,24 @@
 package com.br.aws.ecommerce.invoice;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.eventbridge.AmazonEventBridge;
+import com.amazonaws.services.eventbridge.model.PutEventsRequest;
+import com.amazonaws.services.eventbridge.model.PutEventsRequestEntry;
+import com.amazonaws.services.eventbridge.model.PutEventsResult;
 import com.amazonaws.services.lambda.model.ServiceException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.lambda.runtime.events.models.s3.S3EventNotification.S3EventNotificationRecord;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.util.StringUtils;
 import com.br.aws.ecommerce.layers.base.BaseLambdaFunction;
 import com.br.aws.ecommerce.layers.entity.InvoiceEntity;
 import com.br.aws.ecommerce.layers.entity.InvoiceTransactionEntity;
@@ -30,7 +36,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> implements RequestHandler<S3Event, String> {
+public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> implements RequestHandler<S3Event, Boolean> {
 
 	private Logger logger = Logger.getLogger(InvoiceImportFunction.class.getName());
 	
@@ -39,18 +45,20 @@ public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> imp
 	private AmazonDynamoDB dynamoDbClient = ClientsBean.getDynamoDbClient();
 
 	private InvoiceTranscationRepository itRepository  = new InvoiceTranscationRepository(
-			this.dynamoDbClient, System.getenv(Constants.INVOICE_DDB));
+			this.dynamoDbClient, System.getenv(Constants.INVOICE_DDB_KEY));
 	
 	private InvoiceRepository iRepository = new InvoiceRepository(this.dynamoDbClient,
-			System.getenv(Constants.INVOICE_DDB));
+			System.getenv(Constants.INVOICE_DDB_KEY));
 	
 	private InvoiceWSService apiGatewayService = new InvoiceWSService(ClientsBean.getApiGatewayClient());
+	
+	private AmazonEventBridge eventBridgeClient = ClientsBean.getEventBridgeClient();
 
 	@Metrics
 	@Logging
 	@Tracing
 	@Override
-	public String handleRequest(S3Event input, Context context) {
+	public Boolean handleRequest(S3Event input, Context context) {
 		
 		try {
 			
@@ -60,7 +68,7 @@ public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> imp
 	            this.processS3Record(s3Event);
 			}
 
-			return "OK";
+			return true;
 			
 		} catch (Exception e) {
 			this.logger.log(Level.SEVERE, String.format("Error: %s", e.getMessage()), e);
@@ -70,7 +78,8 @@ public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> imp
 
 	}
 	
-	private void processS3Record(S3EventNotificationRecord s3Event) throws InterruptedException, ExecutionException, JsonMappingException, JsonProcessingException {
+	private void processS3Record(S3EventNotificationRecord s3Event) throws InterruptedException, ExecutionException, 
+	JsonMappingException, JsonProcessingException {
 		
 		final String key = s3Event.getS3().getObject().getKey();
 		
@@ -82,10 +91,12 @@ public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> imp
 
 			this.sendMessageReceived(key, bucketName, i);
 			
-			this.processInvoiceObject(key, bucketName);
+			final boolean objectProcessed = this.processInvoiceObject(key, bucketName, i);
 			
-			this.sendMessageProcessed(key, bucketName, i);
-				
+			if (objectProcessed) {
+				this.sendMessageProcessed(key, bucketName, i);
+			}
+		
 
 		} else {
 			apiGatewayService.sendInvoiceStatus(i.getConnectionId(), key , i.getInvoiceTranscationStatus());
@@ -94,15 +105,25 @@ public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> imp
 		}
 	}
 	
-	private void processInvoiceObject(final String key, final String bucketName) throws InterruptedException, ExecutionException, JsonMappingException, JsonProcessingException {
+	private boolean processInvoiceObject(final String key, final String bucketName, InvoiceTransactionEntity i) throws InterruptedException, ExecutionException, JsonMappingException, JsonProcessingException {
 		
 		this.logger.log(Level.INFO, "Process S3 invoice object");
 		
 		final String stringObjectS3 = this.s3Client.getObjectAsString(bucketName, key);
 		
-		this.logger.log(Level.INFO, "String Object: {0}", stringObjectS3);
+		if (StringUtils.isNullOrEmpty(stringObjectS3)) {
+			this.logger.log(Level.WARNING, "Empty String Object");
+			this.disconectClientInvalidInvoice(key, i);
+			return false;
+		}
 		
 		final InvoiceObjectDTO invoiceObject =  super.getMapper().readValue(stringObjectS3, InvoiceObjectDTO.class);
+		
+		if (invoiceObject.getInvoiceNumber() == null || invoiceObject.getInvoiceNumber().length() < 5) {
+			this.logger.log(Level.WARNING, "Invalid invoice number");
+			this.disconectClientInvalidInvoice(key, i);
+			return false;
+		}
 		
 		this.logger.log(Level.INFO, "Invoice Object: {0}", invoiceObject);
 		
@@ -113,7 +134,22 @@ public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> imp
 		final CompletableFuture<Void> invoiceFileTasks = CompletableFuture.allOf(createInvoiceTask, deleteS3ObjectTask);
 
 		invoiceFileTasks.get();
+		
+		return true;
 
+	}
+	
+	private void disconectClientInvalidInvoice(String key, InvoiceTransactionEntity i) throws InterruptedException, ExecutionException {
+		
+		final CompletableFuture<Void> eventBridgeTask = CompletableFuture.runAsync(() -> this.sendErrorToEventBridge("{\"reason\": \"" + System.getenv(Constants.FAIL_CHECK_INVOICE_KEY) + "\"}"));
+
+		final CompletableFuture<Void> updateTransactionTask = CompletableFuture.runAsync(() -> this.itRepository.update(key, InvoiceTranscationStatus.NON_VALID_INVOICE_NUMBER));
+		
+		final CompletableFuture<Void> invalidInvoiceNumberTasks = CompletableFuture.allOf(eventBridgeTask, updateTransactionTask);
+
+		invalidInvoiceNumberTasks.get();
+		
+		this.apiGatewayService.disconnectClient(i.getConnectionId());
 	}
 	
     private void sendMessageReceived(final String key, final String bucketName, final InvoiceTransactionEntity i) throws InterruptedException, ExecutionException, JsonMappingException, JsonProcessingException {
@@ -147,6 +183,22 @@ public class InvoiceImportFunction extends BaseLambdaFunction<InvoiceEntity> imp
 		invoiceProcessedTasks.get();
 
 	}
+     
+     private void sendErrorToEventBridge(String jsonMessage) {
+    	 
+    	this.logger.log(Level.INFO, "EventBridge putEvents: {0}", jsonMessage);
+    		
+ 		final PutEventsResult putEventsResult = this.eventBridgeClient.putEvents(new PutEventsRequest().withEntries(
+ 				new PutEventsRequestEntry()
+ 				.withSource(System.getenv(Constants.INVOICE_SOURCE_EVENT_BRIDGE_KEY))
+ 				.withEventBusName(System.getenv(Constants.AUDIT_EVENT_BRIDGE_KEY))
+ 				.withDetailType("invoice")
+ 				.withDetail(jsonMessage)
+ 				.withTime(new Date())));
+ 		
+ 		this.logger.log(Level.INFO, "EventBridge putEventsResult status code: {0}", putEventsResult.getSdkHttpMetadata().getHttpStatusCode());
+ 		
+ 	}
 	
 	private void saveInvoice(InvoiceObjectDTO invoiceFile, InvoiceRepository iRepository, String key) {
 		

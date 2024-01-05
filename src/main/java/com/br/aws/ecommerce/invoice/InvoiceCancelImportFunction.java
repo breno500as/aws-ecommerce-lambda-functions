@@ -31,7 +31,7 @@ public class InvoiceCancelImportFunction extends BaseLambdaFunction<InvoiceEntit
 	
 
 	private InvoiceTranscationRepository itRepository = new InvoiceTranscationRepository(
-			ClientsBean.getDynamoDbClient(), System.getenv(Constants.INVOICE_DDB));
+			ClientsBean.getDynamoDbClient(), System.getenv(Constants.INVOICE_DDB_KEY));
 	
  
 	@Metrics

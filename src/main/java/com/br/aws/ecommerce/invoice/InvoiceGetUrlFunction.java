@@ -41,13 +41,14 @@ import software.amazon.lambda.powertools.tracing.Tracing;
  *  com o status de URL_GENERATED, o mensagem de timeout é enviada para o cliente (Isso vai simular um erro no processamento da importação do arquivo).
  */
 
-public class InvoiceGetUrlFunction extends BaseLambdaFunction<InvoiceTransactionEntity> implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
+public class InvoiceGetUrlFunction extends BaseLambdaFunction<InvoiceTransactionEntity>
+		implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
 
 	private Logger logger = Logger.getLogger(InvoiceGetUrlFunction.class.getName());
 
 	private static final String S3_BUCKET_KEY = "S3_BUCKET_KEY";
 	
-	private InvoiceTranscationRepository itRepository = new InvoiceTranscationRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.INVOICE_DDB));
+	private InvoiceTranscationRepository itRepository = new InvoiceTranscationRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.INVOICE_DDB_KEY));
 	
 	@Metrics
 	@Logging

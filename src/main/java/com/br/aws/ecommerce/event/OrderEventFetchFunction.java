@@ -28,7 +28,7 @@ public class OrderEventFetchFunction extends BaseLambdaFunction<OrderEntity> imp
 	
 	private static final String EVENT_TYPE_KEY = "eventType";
 	
-	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
+	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB_KEY));
 
 	@Tracing
 	@Logging

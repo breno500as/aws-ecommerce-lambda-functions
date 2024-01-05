@@ -21,17 +21,17 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrderEventFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SNSEvent, String> {
+public class OrderEventFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SNSEvent, Boolean> {
 
 	private Logger logger = Logger.getLogger(OrderFunction.class.getName());
 	
-	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
+	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB_KEY));
 
 	@Tracing
 	@Logging
 	@Metrics
 	@Override
-	public String handleRequest(SNSEvent input, Context context) {
+	public Boolean handleRequest(SNSEvent input, Context context) {
 
 		try {
  
@@ -54,7 +54,7 @@ public class OrderEventFunction extends BaseLambdaFunction<OrderEntity> implemen
 			}
 			 
 			
-			return "OK";
+			return true;
 
 		} catch (Exception e) {
 			this.logger.log(Level.SEVERE, String.format("Error: %s", e.getMessage()), e);

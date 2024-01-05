@@ -17,7 +17,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
-public class OrderPaymentFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SNSEvent, String> {
+public class OrderPaymentFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SNSEvent, Boolean> {
 
 	private Logger logger = Logger.getLogger(OrderPaymentFunction.class.getName());
 
@@ -25,7 +25,7 @@ public class OrderPaymentFunction extends BaseLambdaFunction<OrderEntity> implem
 	@Logging
 	@Metrics
 	@Override
-	public String handleRequest(SNSEvent input, Context context) {
+	public Boolean handleRequest(SNSEvent input, Context context) {
 
 		try {
 			 
@@ -42,7 +42,7 @@ public class OrderPaymentFunction extends BaseLambdaFunction<OrderEntity> implem
 			}
 			 
 			
-			return "OK";
+			return true;
 
 		} catch (Exception e) {
 			this.logger.log(Level.SEVERE, String.format("Error: %s", e.getMessage()), e);

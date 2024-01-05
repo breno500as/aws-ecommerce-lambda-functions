@@ -1,5 +1,6 @@
 package com.br.aws.ecommerce.order;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,10 @@ import java.util.logging.Logger;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.eventbridge.AmazonEventBridge;
+import com.amazonaws.services.eventbridge.model.PutEventsRequest;
+import com.amazonaws.services.eventbridge.model.PutEventsRequestEntry;
+import com.amazonaws.services.eventbridge.model.PutEventsResult;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -54,15 +59,19 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 	
 	final AmazonDynamoDB dynamoDbClient = ClientsBean.getDynamoDbClient();
 	
-	final OrderRepository orderRepository = new OrderRepository(this.dynamoDbClient, System.getenv(Constants.ORDERS_DDB));
+	final OrderRepository orderRepository = new OrderRepository(this.dynamoDbClient, System.getenv(Constants.ORDERS_DDB_KEY));
 	
-	final ProductRepository productRepository = new ProductRepository(this.dynamoDbClient, System.getenv(Constants.PRODUCTS_DDB));
+	final ProductRepository productRepository = new ProductRepository(this.dynamoDbClient, System.getenv(Constants.PRODUCTS_DDB_KEY));
+	
+	private AmazonEventBridge eventBridgeClient = ClientsBean.getEventBridgeClient();
 
 	@Tracing
 	@Logging
 	@Metrics
 	@Override
 	public APIGatewayProxyResponseEvent handleRequest(final APIGatewayProxyRequestEvent input, final Context context) {
+		
+		
 		
 		final Map<String, String> headers = new HashMap<>();
 		headers.put("Content-Type", "application/json");
@@ -110,7 +119,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 					final OrderEntity order = this.orderRepository.findByEmailAndOrderId(email, orderId);
 					
 					if (order == null) {
-						return this.notFound(response);
+						return this.notFound(response, "Order not found");
 					}
 					
 			
@@ -120,7 +129,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 				final List<OrderEntity> orders = this.orderRepository.findByEmail(email);
 				
 				if (orders == null || orders.isEmpty()) {
-					return this.notFound(response);
+					return this.notFound(response, "Orders not found");
 				}
 				
 				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orders));
@@ -147,15 +156,17 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 			final List<ProductEntity> products = this.productRepository.getByIds(orderBody.getIdsProducts());
 
 			if (products == null || products.size() != idsProductsRequest.size()) {
-				this.logger.log(Level.WARNING, "Different products size");
-				return this.notFound(response);
+				
+				 
+				
+				this.sendErrorToEventBridge("{\"reason\": \"" + System.getenv(Constants.PRODUCT_NOT_FOUND_KEY) + "\"}");
+				
+				return this.notFound(response, "Product not found");
 			}
 
 			orderBody.setProducts(products);
 						
-			final CompletableFuture<OrderEntity> dynamoTask = CompletableFuture.supplyAsync(() -> 
-			       this.orderRepository.save(orderBody)
-			);
+			final CompletableFuture<OrderEntity> dynamoTask = CompletableFuture.supplyAsync(() -> this.orderRepository.save(orderBody));
 
 			 
 			final CompletableFuture<Void> snsTask = CompletableFuture.runAsync(() -> {
@@ -166,8 +177,6 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 				}
 			});
 			
-			// https://stackoverflow.com/questions/34211080/how-do-you-access-completed-futures-passed-to-completablefuture-allof
-		 
 			final CompletableFuture<Void> allTasks = CompletableFuture.allOf(dynamoTask, snsTask);
 			
 			allTasks.get();  
@@ -182,8 +191,8 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 			final String orderId = queryStringParams.get(ORDER_ID_KEY);
 			
 			if (email == null || orderId == null) {
-				this.logger.log(Level.WARNING, "Email or orderId null for delete");
-				return this.notFound(response);
+			 
+				return this.notFound(response, "Email or orderId not found for delete");
 			}
 
 			this.orderRepository.deleteByEmailAndOrderId(email, orderId);
@@ -197,16 +206,31 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 			return response.withStatusCode(204);
 		}
 		
-		return this.notFound(response);
+		return this.notFound(response, "Method not found");
+		
+	}
+	
+	private void sendErrorToEventBridge(String jsonMessage) {
+	
+		this.logger.log(Level.INFO, "EventBridge putEvents: {0}", jsonMessage);
+		
+		final PutEventsResult putEventsResult = this.eventBridgeClient.putEvents(new PutEventsRequest().withEntries(
+				new PutEventsRequestEntry()
+				.withSource(System.getenv(Constants.ORDER_SOURCE_EVENT_BRIDGE_KEY))
+				.withEventBusName(System.getenv(Constants.AUDIT_EVENT_BRIDGE_KEY))
+				.withDetailType("order")
+				.withDetail(jsonMessage)
+				.withTime(new Date())));
+		
+		this.logger.log(Level.WARNING, "EventBridge putEventsResult status code: {0}", putEventsResult.getSdkHttpMetadata().getHttpStatusCode());
 		
 	}
 	
  
 	
-	private APIGatewayProxyResponseEvent notFound(APIGatewayProxyResponseEvent response) throws JsonProcessingException {
-		this.logger.log(Level.WARNING, "Not Found");
-		return response.withBody(super.getMapper().writeValueAsString(new ErrorMessageDTO("Not Found")))
-				.withStatusCode(404);
+	private APIGatewayProxyResponseEvent notFound(APIGatewayProxyResponseEvent response, String message) throws JsonProcessingException {
+		this.logger.log(Level.WARNING, "{0}", message);
+		return response.withBody(super.getMapper().writeValueAsString(new ErrorMessageDTO(message))).withStatusCode(404);
 	}
 	
 	private void publishSnsNotification(final OrderEntity order, final OrderEventTypeEnum orderEventType, String lambdaRequestId) throws JsonProcessingException {

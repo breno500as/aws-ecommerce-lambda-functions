@@ -36,7 +36,7 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 
 	private Logger logger = Logger.getLogger(ProductAdminFunction.class.getName());
 	
-	private ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB));
+	private ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB_KEY));
 
 	@Tracing
 	@Logging

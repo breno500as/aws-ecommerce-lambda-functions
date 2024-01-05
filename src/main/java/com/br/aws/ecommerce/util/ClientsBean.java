@@ -7,6 +7,8 @@ import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagement
 import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagementApiClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.eventbridge.AmazonEventBridge;
+import com.amazonaws.services.eventbridge.AmazonEventBridgeClient;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
@@ -51,6 +53,11 @@ public class ClientsBean {
 		return  AmazonSimpleEmailServiceClientBuilder.standard()
 		            .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
 		            .withRegion(Regions.US_EAST_1).build();
+	}
+	
+	
+	public static AmazonEventBridge getEventBridgeClient() {
+		return AmazonEventBridgeClient.builder().withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
 	}
 
 }

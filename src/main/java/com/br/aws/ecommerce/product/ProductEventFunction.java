@@ -21,7 +21,7 @@ public class ProductEventFunction extends BaseLambdaFunction<ProductEntity> impl
 
 	private Logger logger = Logger.getLogger(ProductAdminFunction.class.getName());
 	
-	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
+	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB_KEY));
 
 	@Tracing
 	@Logging
