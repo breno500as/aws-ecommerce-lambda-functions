@@ -51,6 +51,12 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 	private static final String ORDER_ID_KEY = "orderId";
 	
 	private static final String PRODUCTS_KEY = "products";
+	
+	final AmazonDynamoDB dynamoDbClient = ClientsBean.getDynamoDbClient();
+	
+	final OrderRepository orderRepository = new OrderRepository(this.dynamoDbClient, System.getenv(Constants.ORDERS_DDB));
+	
+	final ProductRepository productRepository = new ProductRepository(this.dynamoDbClient, System.getenv(Constants.PRODUCTS_DDB));
 
 	@Tracing
 	@Logging
@@ -68,15 +74,11 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 		
 		try {
 
-			final AmazonDynamoDB dynamoDbClient = ClientsBean.getDynamoDbClient();
-
-			final OrderRepository orderRepository = new OrderRepository(dynamoDbClient, System.getenv(Constants.ORDERS_DDB));
-			final ProductRepository productRepository = new ProductRepository(dynamoDbClient, System.getenv(Constants.PRODUCTS_DDB));
 			
 			if ("GET".equals(input.getHttpMethod())) {
-				return this.handleRequestRead(orderRepository,productRepository, input, response);
+				return this.handleRequestRead(input, response);
 			} else {
-				return this.handleRequestWrite(orderRepository, productRepository,  input, response, lamdaRequestId);
+				return this.handleRequestWrite(input, response, lamdaRequestId);
 			}
 
 		 
@@ -87,8 +89,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 		
 	}
 	
-	private APIGatewayProxyResponseEvent handleRequestRead(final OrderRepository orderRepository,
-			ProductRepository productRepository,
+	private APIGatewayProxyResponseEvent handleRequestRead(
 			final APIGatewayProxyRequestEvent input, final APIGatewayProxyResponseEvent response)
 			throws JsonProcessingException {
 		
@@ -106,7 +107,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 				
 				if (orderId != null) {
 					
-					final OrderEntity order = orderRepository.findByEmailAndOrderId(email, orderId);
+					final OrderEntity order = this.orderRepository.findByEmailAndOrderId(email, orderId);
 					
 					if (order == null) {
 						return this.notFound(response);
@@ -116,7 +117,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 					return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(order));
 				}
 				
-				final List<OrderEntity> orders = orderRepository.findByEmail(email);
+				final List<OrderEntity> orders = this.orderRepository.findByEmail(email);
 				
 				if (orders == null || orders.isEmpty()) {
 					return this.notFound(response);
@@ -126,12 +127,11 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 			} 
 
 		 
-			return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(orderRepository.findAll("S".equals(products) ? true : false)));
+			return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(this.orderRepository.findAll("S".equals(products) ? true : false)));
 		 
 	}
 
-	private APIGatewayProxyResponseEvent handleRequestWrite(final OrderRepository orderRepository,
-			ProductRepository productRepository,
+	private APIGatewayProxyResponseEvent handleRequestWrite(
 			final APIGatewayProxyRequestEvent input, final APIGatewayProxyResponseEvent response, String lamdaRequestId)
 			throws JsonMappingException, JsonProcessingException, InterruptedException, ExecutionException {
 		
@@ -144,7 +144,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 
 			final List<String> idsProductsRequest = orderBody.getIdsProducts();
 
-			final List<ProductEntity> products = productRepository.getByIds(orderBody.getIdsProducts());
+			final List<ProductEntity> products = this.productRepository.getByIds(orderBody.getIdsProducts());
 
 			if (products == null || products.size() != idsProductsRequest.size()) {
 				this.logger.log(Level.WARNING, "Different products size");
@@ -154,7 +154,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 			orderBody.setProducts(products);
 						
 			final CompletableFuture<OrderEntity> dynamoTask = CompletableFuture.supplyAsync(() -> 
-			       orderRepository.save(orderBody)
+			       this.orderRepository.save(orderBody)
 			);
 
 			 
@@ -186,7 +186,7 @@ public class OrderFunction extends BaseLambdaFunction<OrderEntity> implements Re
 				return this.notFound(response);
 			}
 
-			orderRepository.deleteByEmailAndOrderId(email, orderId);
+			this.orderRepository.deleteByEmailAndOrderId(email, orderId);
 			
 			final OrderEntity order = new OrderEntity();
 			order.setPk(email);

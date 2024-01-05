@@ -26,6 +26,8 @@ public class ProductFetchFunction extends BaseLambdaFunction<ProductEntity>
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 	
 	private Logger logger = Logger.getLogger(ProductFetchFunction.class.getName());
+	
+	private final ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB));
 
 	@Tracing
 	@Logging
@@ -51,12 +53,10 @@ public class ProductFetchFunction extends BaseLambdaFunction<ProductEntity>
 
             this.logger.log(Level.INFO, String.format("apiRequestId: %s , lamdaRequestId: %s ", apiRequestId, lamdaRequestId));
 			
-	 		final ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB));
-			
 			
 			if ("/products".equals(input.getResource())) {
 
-				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(productRepository.findAll()));
+				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(this.productRepository.findAll()));
 				
 				 
 

@@ -27,6 +27,8 @@ public class OrderEventFetchFunction extends BaseLambdaFunction<OrderEntity> imp
 	private static final String EMAIL_KEY = "email";
 	
 	private static final String EVENT_TYPE_KEY = "eventType";
+	
+	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
 
 	@Tracing
 	@Logging
@@ -41,8 +43,6 @@ public class OrderEventFetchFunction extends BaseLambdaFunction<OrderEntity> imp
 
 		try {
 
-			final EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
-			
 			final Map<String, String> queryStringParams = input.getQueryStringParameters();
 			   	 	
 			final String email = queryStringParams.get(EMAIL_KEY);
@@ -50,9 +50,9 @@ public class OrderEventFetchFunction extends BaseLambdaFunction<OrderEntity> imp
 			final String eventType =  queryStringParams.get(EVENT_TYPE_KEY);
 			
 			if (eventType == null) {
-				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(eventRepository.findByEmail(email)));
+				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(this.eventRepository.findByEmail(email)));
 			} else {
-				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(eventRepository.findByEmailAndEventType(email, eventType)));
+				return response.withStatusCode(200).withBody(super.getMapper().writeValueAsString(this.eventRepository.findByEmailAndEventType(email, eventType)));
 			}
 			
 

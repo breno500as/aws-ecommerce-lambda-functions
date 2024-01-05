@@ -24,6 +24,8 @@ import software.amazon.lambda.powertools.tracing.Tracing;
 public class OrderEventFunction extends BaseLambdaFunction<OrderEntity> implements RequestHandler<SNSEvent, String> {
 
 	private Logger logger = Logger.getLogger(OrderFunction.class.getName());
+	
+	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
 
 	@Tracing
 	@Logging
@@ -47,9 +49,7 @@ public class OrderEventFunction extends BaseLambdaFunction<OrderEntity> implemen
 				
 				orderEvent.setMessageId(sns.getMessageId());
 
-				final EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
-				
-				eventRepository.saveOrderEvent(orderEvent, orderEnvelope);
+				this.eventRepository.saveOrderEvent(orderEvent, orderEnvelope);
 				
 			}
 			 

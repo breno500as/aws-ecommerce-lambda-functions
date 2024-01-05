@@ -20,6 +20,8 @@ import software.amazon.lambda.powertools.tracing.Tracing;
 public class ProductEventFunction extends BaseLambdaFunction<ProductEntity> implements RequestHandler<ProductEventDTO, String> {
 
 	private Logger logger = Logger.getLogger(ProductAdminFunction.class.getName());
+	
+	private EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
 
 	@Tracing
 	@Logging
@@ -34,9 +36,7 @@ public class ProductEventFunction extends BaseLambdaFunction<ProductEntity> impl
 
 			productEvent.setRequestId(context.getAwsRequestId());
 
-			final EventRepository eventRepository = new EventRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.EVENTS_DDB));
-
-			eventRepository.saveProductEvent(productEvent);
+			this.eventRepository.saveProductEvent(productEvent);
 
 			return "OK " + productEvent.getProductEventType().getValue();
 

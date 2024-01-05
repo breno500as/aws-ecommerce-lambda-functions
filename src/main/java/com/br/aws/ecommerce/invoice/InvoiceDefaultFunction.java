@@ -31,7 +31,11 @@ public class InvoiceDefaultFunction  implements RequestHandler<APIGatewayV2WebSo
 		
 		final InvoiceWSService service = new InvoiceWSService(ClientsBean.getApiGatewayClient());
 		
-		service.sendData(connectionId, "{\"message\": \"Velho vagabundo! Vai pra jaula\" }");
+		service.sendData(connectionId, "{\"message\": \"Velho vagabundo!\" }");
+		
+		service.sendData(connectionId, "{\"message\": \"Vai pra jaula canalha\" }");
+		
+		service.sendData(connectionId, "{\"message\": \"Moer esse velho na bala\" }");
 
 		response.setStatusCode(200);
 	

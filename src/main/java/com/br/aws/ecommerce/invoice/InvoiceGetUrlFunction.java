@@ -25,11 +25,24 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
+
+
+/**
+ * 
+ * Chamada do webscoket
+ * 
+ * primeira: { "action": "getImportUrl" }
+ * 
+ * segunda de cancelamento { "action": "cancelImport", "transactionId": "56cd0406-b06e-420f-8b61-93d7e6b1be0e" }
+ */
+
 public class InvoiceGetUrlFunction extends BaseLambdaFunction<InvoiceTransactionEntity> implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
 
 	private Logger logger = Logger.getLogger(InvoiceGetUrlFunction.class.getName());
 
 	private static final String S3_BUCKET_KEY = "S3_BUCKET_KEY";
+	
+	private InvoiceTranscationRepository itRepository = new InvoiceTranscationRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.INVOICE_DDB));
 	
 	@Metrics
 	@Logging
@@ -51,7 +64,7 @@ public class InvoiceGetUrlFunction extends BaseLambdaFunction<InvoiceTransaction
 		final InvoiceWSService invoiceWSService = new InvoiceWSService(ClientsBean.getApiGatewayClient());
 		
 		invoiceWSService.sendData(connectionId, "{\"url\": \"" + urlPresigned + "\""
-					+ ",\"trascationId\": \"" + i.getSk() + "\""
+					+ ",\"transactionId\": \"" + i.getSk() + "\""
 			        + ",\"expiresIn\": \"" + i.getExpiresIn() + "\"}");
 		
  
@@ -62,8 +75,6 @@ public class InvoiceGetUrlFunction extends BaseLambdaFunction<InvoiceTransaction
 	
 	private InvoiceTransactionEntity createInvoiceTransaction(String connectionId, String awsRequestId, String fileName) {
 		
-		final InvoiceTranscationRepository invoiceTranscationRepository = new InvoiceTranscationRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.INVOICE_DDB));
-		
 		final InvoiceTransactionEntity i = new InvoiceTransactionEntity();
 		i.setTimestamp(Instant.now().toEpochMilli());
 		i.setTtl(Instant.now().plus(Duration.ofMinutes(2)).getEpochSecond());
@@ -73,7 +84,7 @@ public class InvoiceGetUrlFunction extends BaseLambdaFunction<InvoiceTransaction
 		i.setInvoiceTranscationStatus(InvoiceTranscationStatus.GENERATED);
 		i.setConnectionId(connectionId);
 		
-		invoiceTranscationRepository.save(i);
+		this.itRepository.save(i);
 		
 		return i;
 		

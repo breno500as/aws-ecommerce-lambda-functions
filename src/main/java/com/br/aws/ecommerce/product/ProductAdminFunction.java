@@ -35,6 +35,8 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
 	private Logger logger = Logger.getLogger(ProductAdminFunction.class.getName());
+	
+	private ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB));
 
 	@Tracing
 	@Logging
@@ -50,13 +52,12 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 
 		try {
 
-			final ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB));
-
+			
 			if ("/products".equals(input.getResource())) {
 
 				final ProductEntity productBody = getMapper().readValue(input.getBody(), ProductEntity.class);
 
-				final ProductEntity product = productRepository.save(productBody);
+				final ProductEntity product = this.productRepository.save(productBody);
 
 				this.createEvent(product, ProductEventTypeEnum.CREATED, Boolean.TRUE, "insert_user@gmail.com");
 
@@ -70,7 +71,7 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 
 					final ProductEntity productBody = getMapper().readValue(input.getBody(), ProductEntity.class);
 
-					final ProductEntity product = productRepository.update(productBody, id);
+					final ProductEntity product = this.productRepository.update(productBody, id);
 
 					this.createEvent(product, ProductEventTypeEnum.UPDATED, Boolean.TRUE, "update_user@gmail.com");
 
@@ -78,7 +79,7 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 
 				} else if ("DELETE".equals(input.getHttpMethod())) {
 
-					productRepository.delete(id);
+					this.productRepository.delete(id);
 
 					this.createEvent(new ProductEntity(id), ProductEventTypeEnum.DELETED, Boolean.TRUE, "delete_user@gmail.com");
 

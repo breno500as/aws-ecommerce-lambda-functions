@@ -17,7 +17,7 @@ import com.amazonaws.xray.handlers.TracingHandler;
 public class ClientsBean {
 	
 
-	private static final String WEB_SOCKET_API_GATEWAY_KEY = "WEB_SOCKET_API_GATEWAY_KEY";
+	public static final String WEB_SOCKET_API_GATEWAY_KEY = "WEB_SOCKET_API_GATEWAY_KEY";
 	
 
 	public static AmazonApiGatewayManagementApi getApiGatewayClient() {
