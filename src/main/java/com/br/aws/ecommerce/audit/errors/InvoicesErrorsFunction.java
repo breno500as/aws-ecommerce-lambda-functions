@@ -11,6 +11,11 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
+
+/**
+ * Função invocada pelo EventBridge
+ */
+
 public class InvoicesErrorsFunction implements RequestHandler<ScheduledEvent, Boolean> {
 
 	private Logger logger = Logger.getLogger(InvoicesErrorsFunction.class.getName());
