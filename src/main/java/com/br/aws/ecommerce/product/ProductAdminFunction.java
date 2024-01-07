@@ -8,6 +8,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.amazonaws.handlers.AsyncHandler;
+import com.amazonaws.services.cognitoidentity.AmazonCognitoIdentity;
+import com.amazonaws.services.cognitoidentity.model.GetCredentialsForIdentityRequest;
+import com.amazonaws.services.cognitoidentity.model.GetCredentialsForIdentityResult;
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder;
 import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.InvokeRequest;
@@ -31,6 +34,7 @@ import software.amazon.lambda.powertools.logging.Logging;
 import software.amazon.lambda.powertools.metrics.Metrics;
 import software.amazon.lambda.powertools.tracing.Tracing;
 
+
 public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -38,6 +42,8 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 	
 	private ProductRepository productRepository = new ProductRepository(ClientsBean.getDynamoDbClient(), System.getenv(Constants.PRODUCTS_DDB_KEY));
 
+	private AmazonCognitoIdentity cognitoClient = ClientsBean.getCognitoClient();
+	
 	@Tracing
 	@Logging
 	@Metrics
@@ -49,6 +55,39 @@ public class ProductAdminFunction extends BaseLambdaFunction<ProductEntity>
 		headers.put("X-Custom-Header", "application/json");
 		
 		final APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent().withHeaders(headers);
+		
+		this.logger.log(Level.INFO, "APIGatewayProxyRequestEvent:{0} ", input);
+		
+		this.logger.log(Level.INFO, "Request:{0} ", input.getRequestContext() );
+		
+		this.logger.log(Level.INFO, "Identity:{0} ", context.getIdentity());
+		
+		this.logger.log(Level.INFO, "Cognito id:{0} ", input.getRequestContext().getIdentity().getCognitoIdentityId());
+		
+		final Map claims = (Map) input.getRequestContext().getAuthorizer().get("claims");
+		
+		final String token = input.getHeaders().get("Authorization").replaceAll("Bearer", "");
+		
+		this.logger.log(Level.INFO, "Token:{0} ", token);	
+		
+ 		final Map<String, String> logins = new HashMap<>();
+	 	logins.put("cognito-identity.amazonaws.com", token);
+	 	
+	 	final String id2 = (String)  claims.get("sub");
+	 	
+	 	final GetCredentialsForIdentityRequest getCredentialsRequest = new GetCredentialsForIdentityRequest()
+	 	  .withIdentityId(id2)
+	 	  .withLogins(logins);
+	 	
+		this.logger.log(Level.INFO, "Cognito id 2:{0} ", id2);
+		
+
+		 final GetCredentialsForIdentityResult r = this.cognitoClient.getCredentialsForIdentity(getCredentialsRequest);
+		 
+		 this.logger.log(Level.INFO, "GetCredentialsForIdentityResult:{0} ", r);
+		 
+		
+		 
 
 		try {
 

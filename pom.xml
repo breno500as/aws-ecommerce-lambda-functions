@@ -111,6 +111,11 @@
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-eventbridge</artifactId>
 		</dependency>
+		
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-cognitoidentity</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>com.amazonaws</groupId>

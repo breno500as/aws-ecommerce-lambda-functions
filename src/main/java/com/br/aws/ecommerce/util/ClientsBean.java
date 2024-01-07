@@ -5,6 +5,8 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagementApi;
 import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagementApiClientBuilder;
+import com.amazonaws.services.cognitoidentity.AmazonCognitoIdentity;
+import com.amazonaws.services.cognitoidentity.AmazonCognitoIdentityClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.eventbridge.AmazonEventBridge;
@@ -15,6 +17,7 @@ import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
+
 
 public class ClientsBean {
 	
@@ -52,12 +55,24 @@ public class ClientsBean {
 	public static AmazonSimpleEmailService getSimpleEmailClient() {
 		return  AmazonSimpleEmailServiceClientBuilder.standard()
 		            .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
-		            .withRegion(Regions.US_EAST_1).build();
+		            .withRegion(Regions.US_EAST_1.getName()).build();
 	}
 	
 	
 	public static AmazonEventBridge getEventBridgeClient() {
 		return AmazonEventBridgeClient.builder().withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
 	}
+	
+	public static AmazonCognitoIdentity getCognitoClient() {
+		return AmazonCognitoIdentityClientBuilder
+	                .standard()
+	                .withRegion(Regions.US_EAST_1.getName())
+	                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+	                .build();
+	}
+	
+ 
+	
+ 
 
 }
