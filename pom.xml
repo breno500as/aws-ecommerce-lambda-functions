@@ -114,7 +114,7 @@
 		
 		<dependency>
 			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-cognitoidentity</artifactId>
+			<artifactId>aws-java-sdk-cognitoidp</artifactId>
 		</dependency>
 
 		<dependency>

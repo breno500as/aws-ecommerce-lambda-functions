@@ -5,8 +5,8 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagementApi;
 import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagementApiClientBuilder;
-import com.amazonaws.services.cognitoidentity.AmazonCognitoIdentity;
-import com.amazonaws.services.cognitoidentity.AmazonCognitoIdentityClientBuilder;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.eventbridge.AmazonEventBridge;
@@ -63,12 +63,11 @@ public class ClientsBean {
 		return AmazonEventBridgeClient.builder().withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
 	}
 	
-	public static AmazonCognitoIdentity getCognitoClient() {
-		return AmazonCognitoIdentityClientBuilder
-	                .standard()
-	                .withRegion(Regions.US_EAST_1.getName())
-	                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
-	                .build();
+	public static AWSCognitoIdentityProvider getCognitoClient() {
+
+		return AWSCognitoIdentityProviderClientBuilder.standard().withRegion(Regions.US_EAST_1.getName())
+				.withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder())).build();
+
 	}
 	
  
